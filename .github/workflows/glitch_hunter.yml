@@ -1,0 +1,40 @@
+name: 24/7 Price Glitch Hunter
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  hunt-glitches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Glitch Hunter Engine
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          BESTBUY_API_KEY: ${{ secrets.BESTBUY_API_KEY }}
+          KEEPA_RSS_URL: ${{ secrets.KEEPA_RSS_URL }}
+          MIN_DISCOUNT_PCT: '75'
+        run: python glitch_hunter.py
+
+      - name: Save seen deals to prevent duplicate Discord pings
+        run: |
+          git config --global user.name "Glitch Hunter Bot"
+          git config --global user.email "bot@users.noreply.github.com"
+          git add seen_deals.json
+          git diff --staged --quiet || git commit -m "Update seen deals cache [skip ci]"
+          git push
